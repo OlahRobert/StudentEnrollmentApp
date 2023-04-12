@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.OpenApi;
 using StudentEnrollment.Data;
 using AutoMapper;
 using StudentEnrollment.Api.DTOs.Student;
+using StudentEnrollment.Data.Contracts;
 
 namespace StudentEnrollment.Api.Endpoints;
 
@@ -13,18 +14,17 @@ public static class StudentEndpoints
     {
         var group = routes.MapGroup("/api/Student").WithTags(nameof(Student));
 
-        group.MapGet("/", async (StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapGet("/", async (IStudentRepository repo, IMapper mapper) =>
         {
-            var students = await db.Students.ToListAsync();
+            var students = await repo.GetAllAsync();
             return mapper.Map<List<StudentDto>>(students);
         })
         .WithName("GetAllStudents")
         .WithOpenApi();
 
-        group.MapGet("/{id}", async Task<Results<Ok<StudentDto>, NotFound>> (int id, StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapGet("/{id}", async Task<Results<Ok<StudentDto>, NotFound>> (int id, IStudentRepository repo, IMapper mapper) =>
         {
-            return await db.Students.AsNoTracking()
-                .FirstOrDefaultAsync(model => model.Id == id)
+            return await repo.GetAsync(id)
                 is Student model
                     ? TypedResults.Ok(mapper.Map<StudentDto>(model))
                     : TypedResults.NotFound();
@@ -32,41 +32,45 @@ public static class StudentEndpoints
         .WithName("GetStudentById")
         .WithOpenApi();
 
-        group.MapPut("/{id}", async Task<Results<Ok, NotFound>> (int id, StudentDto studentdto, StudentEnrollmentDbContext db) =>
+        group.MapGet("/GetDetails/{id}", async Task<Results<Ok<StudentDetailsDto>, NotFound>> (int id, IStudentRepository repo, IMapper mapper) =>
         {
-            var affected = await db.Students
-                .Where(model => model.Id == id)
-                .ExecuteUpdateAsync(setters => setters
-                  .SetProperty(m => m.FirstName, studentdto.FirstName)
-                  .SetProperty(m => m.LastName, studentdto.LastName)
-                  .SetProperty(m => m.DateOfBirth, studentdto.DateOfBirth)
-                  .SetProperty(m => m.IdNumber, studentdto.IdNumber)
-                  .SetProperty(m => m.Picture, studentdto.Picture)
-                  .SetProperty(m => m.Id, studentdto.Id)
-                );
+            return await repo.GetStudentDetails(id)
+                is Student model
+                    ? TypedResults.Ok(mapper.Map<StudentDetailsDto>(model))
+                    : TypedResults.NotFound();
+        })
+        .WithName("GetStudentDetailsById")
+        .WithOpenApi();
 
-            return affected == 1 ? TypedResults.Ok() : TypedResults.NotFound();
+        group.MapPut("/{id}", async Task<Results<Ok, NotFound>> (int id, StudentDto studentdto, IStudentRepository repo, IMapper mapper) =>
+        {
+            var foundModel = await repo.GetAsync(id);
+
+            if (foundModel is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            mapper.Map(studentdto, foundModel);
+            await repo.UpdateAsync(foundModel);
+            return TypedResults.Ok();
         })
         .WithName("UpdateStudent")
         .WithOpenApi();
 
-        group.MapPost("/", async (CreateStudentDto studentdto, StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapPost("/", async (CreateStudentDto studentdto, IStudentRepository repo, IMapper mapper) =>
         {
             var student = mapper.Map<Student>(studentdto);
-            db.Students.Add(student);
-            await db.SaveChangesAsync();
+            await repo.AddAsync(student);
             return TypedResults.Created($"/api/Student/{student.Id}", student);
         })
         .WithName("CreateStudent")
         .WithOpenApi();
 
-        group.MapDelete("/{id}", async Task<Results<Ok, NotFound>> (int id, StudentEnrollmentDbContext db) =>
+        group.MapDelete("/{id}", async Task<Results<Ok, NotFound>> (int id, IStudentRepository repo) =>
         {
-            var affected = await db.Students
-                .Where(model => model.Id == id)
-                .ExecuteDeleteAsync();
+            return await repo.DeleteAsync(id) ? TypedResults.Ok() : TypedResults.NotFound();
 
-            return affected == 1 ? TypedResults.Ok() : TypedResults.NotFound();
         })
         .WithName("DeleteStudent")
         .WithOpenApi();

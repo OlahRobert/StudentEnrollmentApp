@@ -12,12 +12,18 @@ namespace StudentEnrollment.Api.Configurations
         {
             CreateMap<Course, CourseDto>().ReverseMap();
             CreateMap<Course, CreateCourseDto>().ReverseMap();
+            CreateMap<Course, CourseDetailsDto>()
+                .ForMember(q=>q.Students, x=> x.MapFrom(course => course.Enrollments.Select(stu => stu.Student)))
+                .ReverseMap();
 
             CreateMap<Student, CreateStudentDto>().ReverseMap();
             CreateMap<Student, StudentDto>().ReverseMap();
+            CreateMap<Student, StudentDetailsDto>()
+                .ForMember(q => q.Courses, x => x.MapFrom(student => student.Enrollments.Select(course => course.Course)))
+                .ReverseMap();
 
-            CreateMap<Student, CreateEnrollmentDto>().ReverseMap();
-            CreateMap<Student, EnrollmentDto>().ReverseMap();
+            CreateMap<Enrollment, CreateEnrollmentDto>().ReverseMap();
+            CreateMap<Enrollment, EnrollmentDto>().ReverseMap();
 
         }
     }

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.OpenApi;
 using StudentEnrollment.Data;
 using StudentEnrollment.Api.DTOs.Course;
 using AutoMapper;
+using StudentEnrollment.Data.Contracts;
+using StudentEnrollment.Api.DTOs.Student;
 
 namespace StudentEnrollment.Api.Endpoints;
 
@@ -13,18 +15,17 @@ public static class CourseEndpoints
     {
         var group = routes.MapGroup("/api/Course").WithTags(nameof(Course));
 
-        group.MapGet("/", async (StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapGet("/", async (ICourseRepository repo, IMapper mapper) =>
         {
-            var courses = await db.Courses.ToListAsync();
+            var courses = await repo.GetAllAsync();
             return mapper.Map<List<CourseDto>>(courses);
         })
         .WithName("GetAllCourses")
         .WithOpenApi();
 
-        group.MapGet("/{id}", async Task<Results<Ok<CourseDto>, NotFound>> (int id, StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapGet("/{id}", async Task<Results<Ok<CourseDto>, NotFound>> (int id, ICourseRepository repo, IMapper mapper) =>
         {
-            return await db.Courses.AsNoTracking()
-                .FirstOrDefaultAsync(model => model.Id == id)
+            return await repo.GetAsync(id)
                 is Course model
                     ? TypedResults.Ok(mapper.Map<CourseDto>(model))
                     : TypedResults.NotFound();
@@ -32,39 +33,45 @@ public static class CourseEndpoints
         .WithName("GetCourseById")
         .WithOpenApi();
 
-        group.MapPut("/{id}", async Task<Results<Ok, NotFound>> (int id, CourseDto courseDto, StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapGet("/GetStudents/{id}", async Task<Results<Ok<CourseDetailsDto>, NotFound>> (int id, ICourseRepository repo, IMapper mapper) =>
         {
+            return await repo.GetStudentList(id)
+                is Course model
+                    ? TypedResults.Ok(mapper.Map<CourseDetailsDto>(model))
+                    : TypedResults.NotFound();
+        })
+        .WithName("GetCourseDetailsById")
+        .WithOpenApi();
 
-            var affected = await db.Courses
-            .Where(model => model.Id == id)
-            .ExecuteUpdateAsync(setters => setters
-             .SetProperty(m => m.Title, courseDto.Title)
-             .SetProperty(m => m.Credits, courseDto.Credits)
-             .SetProperty(m => m.Id, courseDto.Id)
-            );
+        group.MapPut("/{id}", async Task<Results<Ok, NotFound>> (int id, CourseDto courseDto, ICourseRepository repo, IMapper mapper) =>
+        {
+            var foundModel = await repo.GetAsync(id);
 
-            return affected == 1 ? TypedResults.Ok() : TypedResults.NotFound();
+            if (foundModel is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            mapper.Map(courseDto, foundModel);
+            await repo.UpdateAsync(foundModel);
+            return TypedResults.Ok();
+
         })
         .WithName("UpdateCourse")
         .WithOpenApi();
 
-        group.MapPost("/", async (CreateCourseDto courseDto, StudentEnrollmentDbContext db, IMapper mapper) =>
+        group.MapPost("/", async (CreateCourseDto courseDto, ICourseRepository repo, IMapper mapper) =>
         {
             var course = mapper.Map<Course>(courseDto);
-            db.Courses.Add(course);
-            await db.SaveChangesAsync();
+            await repo.AddAsync(course);
             return TypedResults.Created($"/api/Course/{course.Id}", course);
         })
         .WithName("CreateCourse")
         .WithOpenApi();
 
-        group.MapDelete("/{id}", async Task<Results<Ok, NotFound>> (int id, StudentEnrollmentDbContext db) =>
+        group.MapDelete("/{id}", async Task<Results<Ok, NotFound>> (int id, ICourseRepository repo) =>
         {
-            var affected = await db.Courses
-                .Where(model => model.Id == id)
-                .ExecuteDeleteAsync();
-
-            return affected == 1 ? TypedResults.Ok() : TypedResults.NotFound();
+            return await repo.DeleteAsync(id) ? TypedResults.Ok() : TypedResults.NotFound();
         })
         .WithName("DeleteCourse")
         .WithOpenApi();
