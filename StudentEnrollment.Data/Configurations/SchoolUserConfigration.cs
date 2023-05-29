@@ -13,8 +13,8 @@ internal class SchoolUserConfigration : IEntityTypeConfiguration<SchoolUser>
              {
                  Id = "2f55dc54-68c9-443e-a44c-526d6a64a061",
                  Email = "schooladmin@localhost.com",
-                 NormalizedEmail = "SCHOOLADMIN@LOCAHOST.COM",
-                 NormalizedUserName = "SCHOOLADMIN@LOCAHOST.COM",
+                 NormalizedEmail = "SCHOOLADMIN@LOCALHOST.COM",
+                 NormalizedUserName = "SCHOOLADMIN@LOCALHOST.COM",
                  UserName = "schooladmin@localhost.com",
                  FirstName = "School",
                  LastName = "Admin",
@@ -25,8 +25,8 @@ internal class SchoolUserConfigration : IEntityTypeConfiguration<SchoolUser>
              {
                  Id = "8f9670f9-b286-4222-bf59-e99dc37511f4",
                  Email = "schooluser@localhost.com",
-                 NormalizedEmail = "SCHOOLUSER@LOCAHOST.COM",
-                 NormalizedUserName = "SCHOOLUSER@LOCAHOST.COM",
+                 NormalizedEmail = "SCHOOLUSER@LOCALHOST.COM",
+                 NormalizedUserName = "SCHOOLUSER@LOCALHOST.COM",
                  UserName = "schooluser@localhost.com",
                  FirstName = "School",
                  LastName = "User",
