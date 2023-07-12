@@ -5,7 +5,7 @@ using StudentEnrollment.Data;
 using StudentEnrollment.Api.DTOs.Course;
 using AutoMapper;
 using StudentEnrollment.Data.Contracts;
-using StudentEnrollment.Api.DTOs.Student;
+using Microsoft.AspNetCore.Authorization;
 
 namespace StudentEnrollment.Api.Endpoints;
 
@@ -20,6 +20,7 @@ public static class CourseEndpoints
             var courses = await repo.GetAllAsync();
             return mapper.Map<List<CourseDto>>(courses);
         })
+        .AllowAnonymous()
         .WithName("GetAllCourses")
         .WithOpenApi();
 
@@ -30,10 +31,11 @@ public static class CourseEndpoints
                     ? TypedResults.Ok(mapper.Map<CourseDto>(model))
                     : TypedResults.NotFound();
         })
+        .AllowAnonymous()
         .WithName("GetCourseById")
         .WithOpenApi();
 
-        group.MapGet("/GetStudents/{id}", async Task<Results<Ok<CourseDetailsDto>, NotFound>> (int id, ICourseRepository repo, IMapper mapper) =>
+        group.MapGet("/GetStudents/{id}", [Authorize] async Task<Results<Ok<CourseDetailsDto>, NotFound>> (int id, ICourseRepository repo, IMapper mapper) =>
         {
             return await repo.GetStudentList(id)
                 is Course model
@@ -69,7 +71,7 @@ public static class CourseEndpoints
         .WithName("CreateCourse")
         .WithOpenApi();
 
-        group.MapDelete("/{id}", async Task<Results<Ok, NotFound>> (int id, ICourseRepository repo) =>
+        group.MapDelete("/{id}", [Authorize(Roles = "Administrator")] async Task<Results<Ok, NotFound>> (int id, ICourseRepository repo) =>
         {
             return await repo.DeleteAsync(id) ? TypedResults.Ok() : TypedResults.NotFound();
         })
